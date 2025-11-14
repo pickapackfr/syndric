@@ -13,7 +13,7 @@ Settings.llm = Ollama(
     context_window=4000,
 )
 
-st.header("Syndric v0.1-alpha")
+st.header("Syndric v0.1-turbo 🏢🤖")
 
 # Initialize the first message
 if "messages" not in st.session_state:
