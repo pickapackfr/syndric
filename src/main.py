@@ -60,7 +60,8 @@ for message in st.session_state.messages:
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         # Route le message avec l'agent de routage LlamaIndex
-        route = route_message(st.session_state.messages)
+        with st.spinner("Je réfléchis..."):
+            route = route_message(st.session_state.messages)
 
         if route == "property":
             with st.spinner("Recherche dans les données du syndic..."):
