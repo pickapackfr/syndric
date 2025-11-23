@@ -67,7 +67,7 @@ source venv/bin/activate     # On macOS/Linux
 ### 3. Install Dependencies
 
 ```bash
-pip install -e .
+uv sync
 ```
 
 This installs the project in editable mode with dependencies from `pyproject.toml`.
@@ -142,8 +142,8 @@ syndric/
 
 Edit `src/main.py` to customize:
 
-- **Embedding Model**: Change `model_name` in `OllamaEmbedding(model_name="qwen3-embedding:0.6b")`
-- **LLM Model**: Change `model="qwen3:latest"` in the `Ollama()` constructor
+- **Embedding Model**: Change `model_name` in `OllamaEmbedding(model_name="qwen3-embedding:xxx")`
+- **LLM Model**: Change `model="qwen3:xxx"` in the `Ollama()` constructor
 - **Context Window**: Adjust `context_window=4000` (in tokens)
 - **System Prompt**: Modify the `system_prompt` parameter (currently in French)
 - **Data Directory**: Change `input_dir="./data"` in `SimpleDirectoryReader()`
