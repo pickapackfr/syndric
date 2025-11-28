@@ -34,8 +34,8 @@ if "messages" not in st.session_state:
 @st.cache_resource(show_spinner=True)
 def load_syndic_data():
     docs = SimpleDirectoryReader(input_dir="data", recursive=True).load_data()
-    vectorStoreIndex = VectorStoreIndex.from_documents(docs, show_progress=True)
-    return vectorStoreIndex
+    vector_store_index = VectorStoreIndex.from_documents(docs, show_progress=True)
+    return vector_store_index
 
 
 index = load_syndic_data()
