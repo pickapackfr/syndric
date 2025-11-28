@@ -60,7 +60,7 @@ try:
                     max_tokens=500,
                 )
                 print(f"LLM Summary:\n{llm_response.choices[0].message.content}")
-                raise Exception(
+                raise RuntimeError(
                     "Debug stop after first file"
                 )  # Remove or comment this line to process all files
 
