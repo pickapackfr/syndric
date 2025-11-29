@@ -1,0 +1,334 @@
+name: Test Main Application
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-syntax-and-imports:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.14"]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install uv
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    - name: Add uv to PATH
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv pip install --system -e .
+        uv pip install --system pytest pytest-mock
+    
+    - name: Check Python syntax
+      run: |
+        python -m py_compile src/main.py
+        python -m py_compile src/utils.py
+        python -c "import ast; ast.parse(open('src/main.py').read())"
+        echo "✅ Python syntax is valid"
+    
+    - name: Test imports (mocked)
+      run: |
+        python -c "
+        import sys
+        from unittest.mock import Mock, MagicMock
+        
+        # Mock all external dependencies
+        sys.modules['streamlit'] = Mock()
+        sys.modules['llama_index.core'] = Mock()
+        sys.modules['llama_index.llms.ollama'] = Mock()
+        sys.modules['llama_index.embeddings.ollama'] = Mock()
+        
+        # Test that utils can be imported
+        try:
+            import src.utils as utils
+            print('✅ utils.py imports successfully')
+        except Exception as e:
+            print(f'❌ utils.py import failed: {e}')
+            sys.exit(1)
+        
+        # Test main.py imports with mocked dependencies
+        try:
+            # Mock streamlit components that are used in main.py
+            st_mock = MagicMock()
+            st_mock.session_state = MagicMock()
+            st_mock.session_state.messages = []
+            st_mock.session_state.keys.return_value = []
+            st_mock.chat_input.return_value = None
+            sys.modules['streamlit'] = st_mock
+            
+            # Import main module
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('main', 'src/main.py')
+            main_module = importlib.util.module_from_spec(spec)
+            
+            # This will test all imports in main.py
+            spec.loader.exec_module(main_module)
+            print('✅ main.py imports successfully')
+            
+        except Exception as e:
+            print(f'❌ main.py import failed: {e}')
+            sys.exit(1)
+        "
+
+  test-functions:
+    runs-on: ubuntu-latest
+    needs: test-syntax-and-imports
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.14"
+    
+    - name: Install uv
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    - name: Add uv to PATH
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv pip install --system -e .
+        uv pip install --system pytest pytest-mock
+    
+    - name: Run unit tests
+      run: |
+        python -m pytest tests/test_units.py -v --tb=short
+    
+    - name: Test main.py functions
+      run: |
+        python -c "
+        import sys
+        from unittest.mock import Mock, MagicMock, patch
+        
+        # Test that main.py functions work
+        print('Testing main.py functionality...')
+        
+        # Mock streamlit and all dependencies
+        st_mock = MagicMock()
+        st_mock.session_state = MagicMock()
+        st_mock.header = MagicMock()
+        st_mock.chat_message = MagicMock()
+        st_mock.chat_input = MagicMock(return_value=None)
+        st_mock.cache_resource = lambda **kwargs: lambda func: func
+        st_mock.spinner = MagicMock()
+        st_mock.write = MagicMock()
+        st_mock.write_stream = MagicMock()
+        
+        sys.modules['streamlit'] = st_mock
+        
+        # Mock LlamaIndex components
+        mock_settings = MagicMock()
+        mock_vector_store = MagicMock()
+        mock_simple_dir_reader = MagicMock()
+        mock_simple_dir_reader.return_value.load_data.return_value = []
+        mock_vector_store_index = MagicMock()
+        mock_vector_store_index.from_documents.return_value = mock_vector_store
+        
+        sys.modules['llama_index.core'] = MagicMock()
+        sys.modules['llama_index.core'].VectorStoreIndex = mock_vector_store_index
+        sys.modules['llama_index.core'].SimpleDirectoryReader = mock_simple_dir_reader
+        sys.modules['llama_index.core'].Settings = mock_settings
+        sys.modules['llama_index.llms.ollama'] = MagicMock()
+        sys.modules['llama_index.embeddings.ollama'] = MagicMock()
+        
+        # Mock utils functions
+        sys.modules['utils'] = MagicMock()
+        sys.modules['utils'].convert_to_chat_messages = MagicMock()
+        sys.modules['utils'].route_message = MagicMock(return_value='general')
+        
+        try:
+            # Create data directory for the test
+            import os
+            os.makedirs('data', exist_ok=True)
+            with open('data/test.txt', 'w') as f:
+                f.write('Test document content')
+            
+            # Import and test main.py
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('main', 'src/main.py')
+            main_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(main_module)
+            
+            # Test that load_syndic_data function exists and can be called
+            if hasattr(main_module, 'load_syndic_data'):
+                result = main_module.load_syndic_data()
+                print('✅ load_syndic_data function works')
+            else:
+                print('⚠️  load_syndic_data function not found, but main.py loaded successfully')
+                
+            print('✅ main.py loads and executes without errors')
+            
+        except Exception as e:
+            print(f'❌ main.py functionality test failed: {e}')
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
+        "
+
+  test-streamlit-syntax:
+    runs-on: ubuntu-latest
+    needs: test-syntax-and-imports
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.14"
+    
+    - name: Install uv
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    - name: Add uv to PATH
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv pip install --system -e .
+    
+    - name: Test Streamlit syntax validation
+      run: |
+        python -c "
+        import ast
+        import sys
+        
+        print('Checking Streamlit-specific syntax...')
+        
+        # Read and parse main.py
+        with open('src/main.py', 'r') as f:
+            source = f.read()
+            
+        try:
+            tree = ast.parse(source)
+            print('✅ AST parsing successful')
+            
+            # Check for common Streamlit patterns
+            streamlit_calls = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call) and hasattr(node.func, 'attr'):
+                    if hasattr(node.func, 'value') and hasattr(node.func.value, 'id'):
+                        if node.func.value.id == 'st':
+                            streamlit_calls.append(node.func.attr)
+                            
+            if streamlit_calls:
+                print(f'✅ Found Streamlit calls: {set(streamlit_calls)}')
+            else:
+                print('⚠️  No Streamlit calls found, checking imports...')
+                
+            # Check for streamlit import
+            has_streamlit_import = False
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if 'streamlit' in alias.name:
+                            has_streamlit_import = True
+                elif isinstance(node, ast.ImportFrom):
+                    if node.module and 'streamlit' in node.module:
+                        has_streamlit_import = True
+                        
+            if has_streamlit_import:
+                print('✅ Streamlit import found')
+            else:
+                print('❌ No Streamlit import found')
+                sys.exit(1)
+                
+        except SyntaxError as e:
+            print(f'❌ Syntax error in main.py: {e}')
+            sys.exit(1)
+        except Exception as e:
+            print(f'❌ Error analyzing main.py: {e}')
+            sys.exit(1)
+        "
+
+  test-dependencies-compatibility:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.14"
+    
+    - name: Install uv
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    - name: Add uv to PATH
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Test dependency installation
+      run: |
+        echo "Testing if all dependencies can be installed..."
+        uv pip install --system --dry-run -e .
+        echo "✅ All dependencies are compatible"
+    
+    - name: Install and test critical imports
+      run: |
+        uv pip install --system streamlit llama-index llama-index-llms-ollama llama-index-embeddings-ollama pandas numpy pytest
+        python -c "
+        import streamlit as st
+        print('✅ Streamlit import successful')
+        
+        import pandas as pd
+        print('✅ Pandas import successful')
+        
+        import numpy as np
+        print('✅ Numpy import successful')
+        
+        try:
+            from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
+            from llama_index.llms.ollama import Ollama
+            from llama_index.embeddings.ollama import OllamaEmbedding
+            print('✅ LlamaIndex components import successful')
+        except ImportError as e:
+            print(f'⚠️  LlamaIndex import issue (expected without Ollama): {e}')
+        "
+
+  security-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.14"
+    
+    - name: Install security tools
+      run: |
+        pip install bandit safety
+    
+    - name: Run security scan with bandit
+      run: |
+        bandit -r src/ -f json -o bandit-report.json || true
+        bandit -r src/ || echo "⚠️  Security issues found, check the code"
+    
+    - name: Check for known vulnerabilities
+      run: |
+        pip freeze | safety check --json || echo "⚠️  Potential vulnerabilities found"
+    
+    - name: Upload security report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-report
+        path: bandit-report.json

@@ -1,0 +1,160 @@
+name: Test Main.py Functionality
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: 
+      - 'src/main.py'
+      - 'src/utils.py'
+      - 'tests/**'
+      - 'pyproject.toml'
+  pull_request:
+    branches: [ main ]
+    paths: 
+      - 'src/main.py'
+      - 'src/utils.py'
+      - 'tests/**'
+      - 'pyproject.toml'
+
+jobs:
+  test-main-functionality:
+    name: Test Main.py Core Functionality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.14"
+    
+    - name: Install uv package manager
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    - name: Add uv to PATH
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv pip install --system -e .
+        uv pip install --system pytest pytest-mock
+    
+    - name: Create test data directory
+      run: |
+        mkdir -p data
+        echo "Test syndic document content about copropriété and charges" > data/test_document.txt
+        echo "Budget document with expenses and regulations" > data/budget.txt
+    
+    - name: Run syntax validation
+      run: |
+        echo "🔍 Testing Python syntax..."
+        python -m py_compile src/main.py
+        python -m py_compile src/utils.py
+        python -c "import ast; ast.parse(open('src/main.py').read())"
+        echo "✅ Python syntax is valid"
+    
+    - name: Test imports with mocking
+      run: python test_local.py
+    
+    - name: Run unit tests
+      run: python -m pytest tests/test_units.py -v --tb=short
+    
+    - name: Run integration tests  
+      run: python -m pytest tests/test_main_integration.py -v --tb=short
+    
+    - name: Test Streamlit app structure
+      run: |
+        python -c "
+        import re
+        
+        # Read main.py
+        with open('src/main.py', 'r') as f:
+            content = f.read()
+        
+        # Check for essential Streamlit components
+        required_patterns = [
+            r'import streamlit|from streamlit',
+            r'st\.header\(',
+            r'st\.session_state',
+            r'st\.chat_input\(',
+            r'st\.chat_message\(',
+            r'st\.cache_resource'
+        ]
+        
+        missing = []
+        for pattern in required_patterns:
+            if not re.search(pattern, content):
+                missing.append(pattern)
+        
+        if missing:
+            print(f'❌ Missing required Streamlit patterns: {missing}')
+            exit(1)
+        else:
+            print('✅ All required Streamlit patterns found')
+        
+        # Check for LlamaIndex integration
+        llama_patterns = [
+            r'from llama_index\.core import',
+            r'VectorStoreIndex',
+            r'SimpleDirectoryReader',
+            r'Settings\.',
+            r'Ollama\('
+        ]
+        
+        missing_llama = []
+        for pattern in llama_patterns:
+            if not re.search(pattern, content):
+                missing_llama.append(pattern)
+        
+        if missing_llama:
+            print(f'❌ Missing LlamaIndex patterns: {missing_llama}')
+            exit(1)
+        else:
+            print('✅ All required LlamaIndex patterns found')
+        "
+    
+    - name: Validate application structure
+      run: |
+        python -c "
+        import os
+        import sys
+        
+        # Check file structure
+        required_files = [
+            'src/main.py',
+            'src/utils.py', 
+            'pyproject.toml',
+            'tests/test_units.py'
+        ]
+        
+        missing_files = []
+        for file in required_files:
+            if not os.path.exists(file):
+                missing_files.append(file)
+        
+        if missing_files:
+            print(f'❌ Missing required files: {missing_files}')
+            sys.exit(1)
+        
+        print('✅ All required files present')
+        
+        # Check that data directory exists (created in previous step)
+        if not os.path.exists('data'):
+            print('❌ Data directory missing')
+            sys.exit(1)
+        
+        print('✅ Data directory exists')
+        print('✅ Application structure validation passed')
+        "
+    
+    - name: Final validation
+      run: |
+        echo "🎉 All main.py tests passed successfully!"
+        echo "✅ Python syntax is valid"
+        echo "✅ All imports work correctly"
+        echo "✅ Unit tests pass"  
+        echo "✅ Integration tests pass"
+        echo "✅ Streamlit structure is correct"
+        echo "✅ Application is ready for deployment"
