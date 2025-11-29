@@ -36,7 +36,7 @@ Syndrik is an AI-powered chat application that allows users to interact with a l
 3. Pull the required models:
 
 ```bash
-ollama pull qwen3:0.6b
+ollama pull qwen3:4b
 ollama pull qwen3-embedding:0.6b
 ```
 
