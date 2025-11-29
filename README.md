@@ -51,35 +51,30 @@ curl http://localhost:11434/api/tags
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/pickapackfr/syndric.git
-cd syndric
+git clone https://github.com/pickapackfr/syndrik.git
+cd syndrik
 ```
 
-### 2. Create a Virtual Environment (Recommended)
-
-```bash
-python -m venv venv
-.\venv\Scripts\Activate.ps1  # On Windows PowerShell
-# or
-source venv/bin/activate     # On macOS/Linux
-```
-
-### 3. Install Dependencies
+### 2. Install Dependencies
 
 ```bash
 uv sync
+```
+
+### 3. Activate a Virtual Environment
+
+```bash
+python -m venv venv
+.\.venv\Scripts\Activate.ps1  # On Windows PowerShell
+# or
+source .venv/bin/activate     # On macOS/Linux
 ```
 
 This installs the project in editable mode with dependencies from `pyproject.toml`.
 
 ### 4. Prepare Data
 
-Create a `data` directory in the project root and add your documents:
-
-```bash
-mkdir data
-# Copy your text or PDF files to the data/ directory
-```
+Update provided TXT files into `data` directory in the project root.
 
 The application will recursively read all files from this directory.
 
@@ -121,20 +116,32 @@ Example questions:
 ## Project Structure
 
 ```
-syndric/
+syndrik2/
+├── .devcontainer/              # Development container configuration
+├── .github/                    # GitHub workflows and templates
+├── .vscode/                    # VS Code settings
 ├── src/
 │   ├── main.py                 # Streamlit chat application
 │   ├── backup.py               # Backup utilities
+│   ├── utils.py                # Utility functions
 │   └── externals/
-│       ├── ollama.py           # Ollama integration reference
-│       ├── openai.py           # OpenAI integration (optional)
-│       └── minio.py            # MinIO storage integration (optional)
+│       └── pypdf_wrapper.py    # PDF processing wrapper
 ├── tests/
 │   ├── __init__.py
-│   └── externals/
-│       └── test_minio.py       # Integration tests
+│   ├── test_main_integration.py # Integration tests
+│   ├── test_units.py           # Unit tests
+│   └── functional/
+│       └── test_streamlit_ui.py # UI functional tests
 ├── data/                       # Place your documents here
-├── pyproject.toml              # Project dependencies
+│   └── PUT_YOUR_TXT_FILE_HERE  # Placeholder for data files
+├── .obsolete/                  # Obsolete/archived files
+├── Dockerfile                  # Docker container configuration
+├── pyproject.toml              # Project dependencies and configuration
+├── uv.lock                     # UV lock file for dependencies
+├── .env.example                # Environment variables example
+├── .gitignore                  # Git ignore rules
+├── .python-version             # Python version specification
+├── .sonarcloud.properties      # SonarCloud configuration
 └── README.md                   # This file
 ```
 
@@ -142,8 +149,8 @@ syndric/
 
 Edit `src/main.py` to customize:
 
-- **Embedding Model**: Change `model_name` in `OllamaEmbedding(model_name="qwen3-embedding:xxx")`
-- **LLM Model**: Change `model="qwen3:xxx"` in the `Ollama()` constructor
+- **Embedding Model**: Change `model_name` in `OllamaEmbedding(model_name="qwen3-embedding:0.6b")`
+- **LLM Model**: Change `model="qwen3:4b"` in the `Ollama()` constructor
 - **Context Window**: Adjust `context_window=4000` (in tokens)
 - **System Prompt**: Modify the `system_prompt` parameter (currently in French)
 - **Data Directory**: Change `input_dir="./data"` in `SimpleDirectoryReader()`
@@ -178,7 +185,7 @@ Key packages (see `pyproject.toml` for full list):
 
 ## License
 
-Team 5 Project
+Project Team 5 @ Leonard de Vinci 2025
 
 ## Support
 
