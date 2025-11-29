@@ -1,5 +1,5 @@
 # Multi-stage Docker build for Syndrik IA
-FROM python:3.14-slim as base
+FROM python:3.14-slim AS base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -9,10 +9,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    git \
     build-essential \
+    curl \
+    git \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
@@ -28,7 +28,7 @@ RUN pip install uv
 RUN uv pip install --system --no-cache-dir -e .
 
 # Production stage
-FROM python:3.14-slim as production
+FROM python:3.14-slim AS production
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -38,14 +38,12 @@ ENV PYTHONUNBUFFERED=1 \
     STREAMLIT_SERVER_HEADLESS=true \
     STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
 
-# Install system dependencies for production
+# Install system dependencies for production and create non-root user
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -r appuser && useradd -r -g appuser appuser
 
 # Create app directory and data directory
 WORKDIR /app
