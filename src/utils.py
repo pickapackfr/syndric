@@ -34,7 +34,7 @@ def route_message(messages: list[dict]) -> Literal["property", "general"]:
     """
     # Utilisation d'un modèle LLM pour la classification
     small_llm = Ollama(
-        model="qwen3:0.6b",
+        model="qwen3:4b",
         request_timeout=30.0,
         context_window=1000,
     )

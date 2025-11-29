@@ -1,7 +1,7 @@
 from unittest.mock import Mock, patch
 
 
-@patch('src.externals.minio.Minio')
+@patch("src.externals.minio.Minio")
 def test_list_buckets_returns_buckets(mock_client):
     """Test that list_buckets returns a list of buckets"""
     # Create mock bucket objects
@@ -25,7 +25,7 @@ def test_list_buckets_returns_buckets(mock_client):
     assert buckets[2].name == "bucket3"
 
 
-@patch('src.externals.minio.Minio')
+@patch("src.externals.minio.Minio")
 def test_list_buckets_empty(mock_client):
     """Test list_buckets when no buckets exist"""
     # Configure mock to return empty list
@@ -39,7 +39,7 @@ def test_list_buckets_empty(mock_client):
     assert isinstance(buckets, list)
 
 
-@patch('src.externals.minio.Minio')
+@patch("src.externals.minio.Minio")
 def test_list_buckets_single_bucket(mock_client):
     """Test list_buckets with a single bucket"""
     # Create mock bucket object
